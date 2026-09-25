@@ -33,6 +33,7 @@ sys.path.insert(0, str(RAIZ))
 from tokenizer import CharTokenizer, char_frequencies  # noqa: E402
 
 DATASET_HF = "Larxel/healthqa-br"
+PARQUET_HF = f"https://huggingface.co/api/datasets/{DATASET_HF}/parquet/default/train/0.parquet"
 SAIDA = RAIZ / "data" / "processed"
 
 # Trocas que reduzem o vocabulário sem mudar o sentido do texto.
@@ -41,7 +42,23 @@ SUBSTITUICOES = {
     "–": "-", "—": "-", "−": "-",                   # travessões e sinal de menos
     " ": " ", "\t": " ", " ": " ", "​": "",           # espaços especiais
     "…": "...",
+    "µ": "μ", "ẞ": "β",                                   # micro e "beta" digitados com o símbolo errado
+    "₁": "1", "₂": "2", "₃": "3", "⁺": "+",              # O₂ -> O2, igual ao resto do corpus
 }
+
+# Homóglifos: letras gregas e cirílicas idênticas às latinas, que vieram coladas dos PDFs
+# originais ("Allium ceра" com "р" cirílico, alternativa "Ε" com épsilon). Para o modelo,
+# "o" latino e "о" cirílico seriam tokens diferentes sem nenhum motivo.
+HOMOGLIFOS = str.maketrans({
+    "Α": "A", "Β": "B", "Ε": "E", "Ι": "I", "Κ": "K", "Μ": "M", "Ν": "N",  # grego
+    "Ο": "O", "Ρ": "P", "Τ": "T", "Υ": "Y", "Χ": "X", "ο": "o",
+    "А": "A", "В": "B", "Е": "E", "М": "M", "Н": "H", "О": "O", "Р": "P",  # cirílico
+    "С": "C", "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x",
+})
+
+# As alternativas vêm como dicionário Python:  'A': 'texto;'  ->  (A) texto;
+# Algumas ocupam várias linhas (quebra de linha do PDF original); essas linhas são unidas.
+ALTERNATIVA = re.compile(r"""^(['"])([A-E])\1: (['"])(.*?)\3$""", re.MULTILINE | re.DOTALL)
 
 
 # ---------------------------------------------------------------- carregamento
@@ -55,11 +72,12 @@ def carregar(arquivo=None):
             return pd.read_parquet(arquivo)
         return pd.read_csv(arquivo)
 
+    print(f"Baixando {DATASET_HF} do Hugging Face...")
     try:
         from datasets import load_dataset
     except ImportError:
-        sys.exit("Instale a biblioteca 'datasets' (pip install datasets) ou use --arquivo.")
-    print(f"Baixando {DATASET_HF} do Hugging Face...")
+        # Sem a biblioteca 'datasets': o Hugging Face também serve o parquet direto por URL.
+        return pd.read_parquet(PARQUET_HF)
     return load_dataset(DATASET_HF, split="train").to_pandas()
 
 
@@ -68,10 +86,12 @@ def limpar(texto):
     texto = unicodedata.normalize("NFC", str(texto))  # "é" sempre como 1 caractere, nunca "e" + acento
     for velho, novo in SUBSTITUICOES.items():
         texto = texto.replace(velho, novo)
+    texto = texto.translate(HOMOGLIFOS)
     texto = texto.replace("\r\n", "\n").replace("\r", "\n")
     texto = re.sub(r" {2,}", " ", texto)                          # espaços repetidos
     texto = "\n".join(linha.strip() for linha in texto.split("\n"))
     texto = re.sub(r"\n{3,}", "\n\n", texto)                      # linhas em branco repetidas
+    texto = ALTERNATIVA.sub(lambda m: f"({m[2]}) " + m[4].replace("\n", " "), texto)
     return texto.strip()
 
 
@@ -109,6 +129,9 @@ def remover_raros(textos, min_freq):
 
 # ---------------------------------------------------------------- principal
 def main():
+    # O console do Windows (cp1252) não imprime alguns símbolos, como "→" ou letras gregas.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--arquivo", help="arquivo local .parquet ou .csv em vez de baixar")
     p.add_argument("--val", type=float, default=0.1, help="fração de validação (padrão 0.1)")

@@ -53,8 +53,20 @@ O cabeçalho dá estrutura ao corpus: na demo, basta começar com `### Revalida`
 
 ## Decisões da Etapa 1 (para o relatório)
 
-- **Tokenização por caractere:** vocabulário pequeno (~100–200 símbolos) e código fácil de explicar. BPE fica como experimento da etapa 5.
+- **Tokenização por caractere:** vocabulário pequeno e código fácil de explicar. BPE fica como experimento da etapa 5.
 - **Limpeza:** normalização Unicode (NFC), aspas e travessões padronizados, espaços repetidos removidos, caracteres com menos de 3 ocorrências descartados. Tudo isso reduz o vocabulário sem mudar o sentido.
+- **Homóglifos:** o texto original, copiado de PDFs, tem letras gregas e cirílicas iguais às latinas (`Allium ceра` com "р" cirílico, alternativa `Ε` com épsilon grego). Elas são trocadas pela letra latina; sem isso, "o" e "о" seriam tokens diferentes.
+- **Alternativas:** no dataset elas vêm como dicionário Python (`'A': 'texto'`, às vezes em várias linhas). Viram `(A) texto` numa linha só.
+
+### Corpus após o `prepare.py`
+
+| Medida | Valor |
+| --- | --- |
+| Questões (treino / validação) | 5.069 / 563 |
+| Tamanho | 5,25 MB |
+| Caracteres de treino / validação | 4.574.978 / 508.218 |
+| Vocabulário | 125 caracteres (144 antes de tratar homóglifos e símbolos equivalentes) |
+| Perda inicial esperada ln(125) | 4,83 |
 - **Separação treino/validação (90/10) por questão:** as questões são embaralhadas antes da divisão. Assim a validação cobre todas as provas e anos, e nenhuma questão fica partida entre os dois conjuntos.
 - **Lotes:** `y` é `x` deslocado uma posição; cada posição do bloco é um exemplo de "preveja o próximo caractere".
 - **Teste de sanidade:** a perda inicial esperada é ln(tamanho do vocabulário), gravada em `data/processed/meta.json`. Na semana 2, a primeira perda do modelo precisa bater com esse valor.

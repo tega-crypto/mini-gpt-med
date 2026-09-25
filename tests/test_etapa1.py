@@ -5,6 +5,7 @@ Testes de sanidade da Etapa 1. Rodam sem internet, com um mini-dataset falso.
 """
 
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -38,6 +39,11 @@ def test_limpeza():
     assert limpar(sujo) == 'Mulher com 72 anos - "anemia"\n\nFim'
     # "é" decomposto (e + acento combinante) vira um caractere só
     assert limpar("é") == "é"
+    # Homóglifos: "р" cirílico e "Ε" grego viram letras latinas.
+    assert limpar("Allium ceра; alternativa Ε") == "Allium cepa; alternativa E"
+    # Alternativas no formato de dicionário viram "(A) texto".
+    assert limpar("Qual?\n'A': 'sim;'\n\"B\": \"it's\"") == "Qual?\n(A) sim;\n(B) it's"
+    assert limpar("'A': 'dosagem de\nFSH;'\n'B': 'não'") == "(A) dosagem de FSH;\n(B) não"
 
 
 def test_formatacao():
@@ -70,7 +76,8 @@ def test_prepare_e_lotes():
         saida = tmp / "processed"
         r = subprocess.run([sys.executable, str(RAIZ / "data" / "prepare.py"), "--arquivo",
                             str(tmp / "falso.csv"), "--saida", str(saida), "--min-freq", "1"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding="utf-8",
+                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         assert r.returncode == 0, r.stderr
         print(r.stdout)
 
@@ -92,6 +99,9 @@ def test_prepare_e_lotes():
         probs_uniformes = np.full(V, 1 / V)
         perda = -np.mean(np.log(probs_uniformes[y]))
         assert abs(perda - math.log(V)) < 1e-9
+
+        # No Windows, o memmap mantém o arquivo aberto e impede apagar a pasta temporária.
+        del train, val
 
 
 if __name__ == "__main__":
