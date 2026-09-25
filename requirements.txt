@@ -1,0 +1,6 @@
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14
+datasets>=2.18
+torch>=2.2        # usado a partir da semana 2
+matplotlib>=3.7   # curva de perda (semana 3)
