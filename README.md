@@ -10,7 +10,7 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 | --- | --- | --- |
 | 1. Dados e tokenização | `data/prepare.py`, `char_tokenizer.py`, `data/loader.py` | Pronta |
 | 2. Arquitetura | `model.py` | Pronta |
-| 3. Treino | `train.py` | Semana 3 |
+| 3. Treino | `train.py` | Pronta |
 | 4. Geração e avaliação | `generate.py` | Semana 3 |
 | 5. Experimentos | `configs/`, `results/` | Semana 4 |
 
@@ -23,8 +23,11 @@ char_tokenizer.py      tokenizador em nível de caractere
 configs/base.json      hiperparâmetros iniciais
 notebooks/             exploração (rodar no Kaggle)
 model.py               o Transformer: atenção causal, blocos e cabeça de saída
+train.py               loop de treino, perda de validação, checkpoint e curva
 tests/test_etapa1.py   testes de sanidade, rodam sem internet
 tests/test_etapa2.py   testes do modelo: formas, causalidade, perda inicial
+tests/test_etapa3.py   treino curto com dados falsos: a perda precisa cair
+checkpoints/           modelos salvos (.pt), ignorados pelo git
 results/               curvas de perda e amostras geradas
 ```
 
@@ -37,6 +40,16 @@ python data/prepare.py        # baixa o HealthQA-BR e gera data/processed/
 ```
 
 No Kaggle: crie um notebook, ative **Settings → Internet: On**, clone o repositório e rode `notebooks/01_exploracao_dados.ipynb`.
+
+## Como treinar (Etapa 3)
+
+```bash
+python train.py                      # configs/base.json, 5.000 passos
+python train.py --max-iters 300      # teste rápido, cerca de 1 minuto na CPU
+python train.py --config configs/outra.json   # outro experimento (Etapa 5)
+```
+
+O modelo com a menor perda de validação fica em `checkpoints/<nome da config>.pt`. A curva e as perdas ficam em `results/<nome da config>/`. O script usa a GPU sozinho quando ela existe (no Kaggle: **Settings → Accelerator → GPU**).
 
 ## Dados
 
@@ -97,6 +110,33 @@ Os testes em `tests/test_etapa2.py` conferem que:
 - mudar um caractere não altera as previsões das posições anteriores (causalidade);
 - a perda inicial é próxima de ln(vocabulário);
 - o modelo consegue decorar um lote pequeno, sinal de que o gradiente chega a todas as camadas.
+
+## Resultados da Etapa 3 (para o relatório)
+
+Treino com `configs/base.json` na CPU: 5.000 passos em 12,7 minutos.
+
+| Medida | Valor |
+| --- | --- |
+| Perda inicial (treino / validação) | 4,90 / 4,90 |
+| Perda final (treino / validação) | 1,23 / 1,25 |
+| Queda mais rápida | 4,90 → 2,30 nos primeiros 250 passos |
+
+![Curva de perda](results/base/curva_perda.png)
+
+- **Sem overfitting:** as curvas de treino e validação ficam juntas até o fim. Como a validação ainda caía no passo 5.000, treinar mais provavelmente melhora o modelo (experimento da Etapa 5).
+- **Os primeiros 250 passos** ensinam o mais fácil: quais caracteres são frequentes, espaços entre palavras, sílabas comuns. Depois o ganho fica lento: palavras inteiras, formato `(A) ... (B) ...`, cabeçalho `### Prova Ano`.
+- **O que é perda 1,25:** em média, o modelo dá probabilidade e^(-1,25) ≈ 29% ao caractere certo, contra 1/125 = 0,8% no início.
+- **Decisões:** AdamW com taxa de aprendizado fixa (0,001), perda média de 100 lotes a cada 250 passos, e o checkpoint guarda o modelo com a menor perda de validação, junto com a config e o vocabulário.
+
+Uma amostra gerada a partir de `### Revalida`: o formato está certo, com cabeçalho, enunciado e alternativas, mas o conteúdo ainda não faz sentido.
+
+```
+### Revalida 2024
+Uma mulher de 64 anos negatinas de idade, com sinais de 10 para a criança de endovenoscopia:
+
+(A) prescrição do soro abdominal e metabólico.
+(B) incluição para o diagnóstico de estrepmetido.
+```
 
 ## Referências
 
