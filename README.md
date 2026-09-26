@@ -28,6 +28,8 @@ generate.py            gera texto com temperatura e top-k; compara temperaturas
 compare.py             compara os experimentos: tabela e curvas em results/
 configs/grande.json    experimento da Etapa 5: modelo 5,8x maior
 relatorio/             relatório de estudo em LaTeX (relatorio.pdf)
+app.py                 interface no navegador, com barra de prompt
+interface/index.html   a página da interface
 tests/test_etapa1.py   testes de sanidade, rodam sem internet
 tests/test_etapa2.py   testes do modelo: formas, causalidade, perda inicial
 tests/test_etapa3.py   treino curto com dados falsos: a perda precisa cair
@@ -55,6 +57,14 @@ python train.py --config configs/outra.json   # outro experimento (Etapa 5)
 ```
 
 O modelo com a menor perda de validação fica em `checkpoints/<nome da config>.pt`. A curva e as perdas ficam em `results/<nome da config>/`. O script usa a GPU sozinho quando ela existe (no Kaggle: **Settings → Accelerator → GPU**).
+
+## Testar no navegador
+
+```bash
+python app.py
+```
+
+Abre `http://localhost:8000` com uma barra de prompt, no estilo do ChatGPT. O texto aparece caractere por caractere, conforme o modelo gera. Dá para escolher o modelo (`base` ou `grande`), a temperatura, o top-k e o tamanho do texto. Não precisa instalar nada além do `requirements.txt`: o servidor usa o `http.server` do próprio Python. Para encerrar, aperte Ctrl+C no terminal.
 
 ## Como gerar texto (Etapa 4)
 

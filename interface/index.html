@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-GPT Médico</title>
+<style>
+  :root {
+    --fundo: #ffffff;
+    --fundo-2: #f4f5f7;
+    --fundo-3: #e9ebef;
+    --texto: #1c1f24;
+    --texto-2: #5d6470;
+    --texto-3: #8b919c;
+    --borda: #dfe2e7;
+    --destaque: #1f6f5c;
+    --destaque-texto: #ffffff;
+    --destaque-suave: #e3f1ec;
+    --aviso: #9a4d00;
+    --aviso-fundo: #fdf0e1;
+    --sombra: 0 6px 24px rgba(20, 24, 31, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fundo: #17191d;
+      --fundo-2: #212429;
+      --fundo-3: #2b2f35;
+      --texto: #e8eaed;
+      --texto-2: #a8aeb8;
+      --texto-3: #7b818b;
+      --borda: #33373e;
+      --destaque: #4fbf9f;
+      --destaque-texto: #0e1a16;
+      --destaque-suave: #1d3029;
+      --aviso: #f0a55c;
+      --aviso-fundo: #33261a;
+      --sombra: 0 6px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--fundo);
+    color: var(--texto);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  /* ------------------------------------------------ topo */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--borda);
+  }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; }
+  .logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--destaque); color: var(--destaque-texto);
+    display: grid; place-items: center; font-size: 15px; font-weight: 700;
+  }
+  .seletor {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--fundo-2); border: 1px solid var(--borda);
+    border-radius: 10px; padding: 4px 6px 4px 12px; font-size: 14px;
+  }
+  .seletor select { background: transparent; border: 0; padding: 4px; font-weight: 600; outline: none; }
+  .seletor select option { background: var(--fundo); }
+  .seletor .info { color: var(--texto-3); }
+
+  /* ------------------------------------------------ conversa */
+  main { flex: 1; overflow-y: auto; }
+  .coluna { max-width: 780px; margin: 0 auto; padding: 24px 20px 12px; }
+
+  .vazio { text-align: center; padding-top: 8vh; }
+  .vazio h1 { font-size: 28px; margin: 0 0 8px; font-weight: 650; }
+  .vazio p { color: var(--texto-2); margin: 0 auto 28px; max-width: 520px; }
+  .sugestoes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; }
+  .sugestao {
+    background: var(--fundo); border: 1px solid var(--borda); border-radius: 12px;
+    padding: 12px 14px; text-align: left; transition: background .15s, border-color .15s;
+  }
+  .sugestao:hover { background: var(--fundo-2); border-color: var(--texto-3); }
+  .sugestao b { display: block; font-size: 14px; }
+  .sugestao span { color: var(--texto-2); font-size: 13px; font-family: ui-monospace, Consolas, monospace; }
+
+  .turno { margin-bottom: 28px; }
+  .pergunta { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  .pergunta div {
+    background: var(--fundo-3); border-radius: 18px 18px 4px 18px;
+    padding: 10px 16px; max-width: 80%; white-space: pre-wrap; word-break: break-word;
+  }
+  .resposta { display: flex; gap: 12px; }
+  .resposta .logo { flex: none; margin-top: 2px; }
+  .corpo { flex: 1; min-width: 0; }
+  .texto { white-space: pre-wrap; word-break: break-word; }
+  .texto .inicio { color: var(--texto-3); }
+  .cursor {
+    display: inline-block; width: 8px; height: 1.1em; vertical-align: -3px;
+    background: var(--destaque); margin-left: 1px; animation: piscar 1s steps(1) infinite;
+  }
+  @keyframes piscar { 50% { opacity: 0; } }
+  .rodape-resposta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    margin-top: 8px; font-size: 13px; color: var(--texto-3);
+  }
+  .rodape-resposta button {
+    background: transparent; border: 1px solid transparent; border-radius: 8px;
+    padding: 2px 8px; color: var(--texto-2); font-size: 13px;
+  }
+  .rodape-resposta button:hover { background: var(--fundo-2); border-color: var(--borda); }
+  .erro {
+    background: var(--aviso-fundo); color: var(--aviso);
+    border-radius: 10px; padding: 10px 14px; font-size: 14px;
+  }
+
+  /* ------------------------------------------------ barra de prompt */
+  .area-prompt { padding: 8px 20px 14px; }
+  .caixa {
+    max-width: 780px; margin: 0 auto;
+    background: var(--fundo); border: 1px solid var(--borda); border-radius: 22px;
+    box-shadow: var(--sombra); padding: 10px 10px 8px 16px;
+  }
+  .caixa:focus-within { border-color: var(--texto-3); }
+  textarea {
+    width: 100%; border: 0; outline: none; resize: none; background: transparent;
+    max-height: 200px; padding: 4px 0; line-height: 1.5;
+  }
+  textarea::placeholder { color: var(--texto-3); }
+  .acoes { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .botao-icone {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--borda);
+    background: var(--fundo); display: grid; place-items: center; color: var(--texto-2);
+  }
+  .botao-icone:hover, .botao-icone.ativo { background: var(--fundo-2); color: var(--texto); }
+  .enviar { border: 0; background: var(--destaque); color: var(--destaque-texto); }
+  .enviar:hover { background: var(--destaque); filter: brightness(1.08); color: var(--destaque-texto); }
+  .enviar:disabled { background: var(--fundo-3); color: var(--texto-3); cursor: default; filter: none; }
+  .resumo-ajustes { font-size: 13px; color: var(--texto-3); margin-right: auto; margin-left: 8px; }
+
+  .ajustes {
+    display: none; max-width: 780px; margin: 0 auto 8px;
+    background: var(--fundo-2); border: 1px solid var(--borda); border-radius: 16px;
+    padding: 14px 18px; gap: 14px 28px; grid-template-columns: repeat(3, 1fr);
+  }
+  .ajustes.aberto { display: grid; }
+  .ajuste label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+  .ajuste label output { font-weight: 500; color: var(--texto-2); }
+  .ajuste input[type=range] { width: 100%; accent-color: var(--destaque); }
+  .ajuste select { width: 100%; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--borda); background: var(--fundo); }
+  .ajuste small { display: block; color: var(--texto-3); font-size: 12px; line-height: 1.4; margin-top: 2px; }
+
+  .alerta-vocab { max-width: 780px; margin: 6px auto 0; font-size: 13px; color: var(--aviso); min-height: 0; }
+  .aviso-final { text-align: center; font-size: 12px; color: var(--texto-3); margin-top: 8px; }
+
+  @media (max-width: 640px) {
+    header { padding: 10px 14px; }
+    .seletor .info { display: none; }
+    .coluna { padding: 16px 14px 8px; }
+    .sugestoes { grid-template-columns: 1fr; }
+    .area-prompt { padding: 6px 12px 10px; }
+    .ajustes { grid-template-columns: 1fr; }
+    .pergunta div { max-width: 92%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca"><div class="logo">M</div>Mini-GPT Médico</div>
+  <div class="seletor">
+    <span class="info" id="info-modelo"></span>
+    <select id="modelo" aria-label="Modelo"></select>
+  </div>
+</header>
+
+<main id="rolagem">
+  <div class="coluna" id="conversa">
+    <div class="vazio" id="vazio">
+      <h1>O que o modelo vai escrever?</h1>
+      <p>Escreva o começo de um texto e o modelo continua, um caractere por vez. Ele não responde perguntas: imita o estilo das questões do Revalida e do Enare.</p>
+      <div class="sugestoes">
+        <button class="sugestao" data-texto="### Revalida 2022 | Pediatria"><b>Questão de Pediatria</b><span>### Revalida 2022 | Pediatria</span></button>
+        <button class="sugestao" data-texto="### Enare Residência Médica 2024 | Cardiologia"><b>Questão do Enare</b><span>### Enare Residência Médica 2024 | Cardiologia</span></button>
+        <button class="sugestao" data-texto="Mulher de 32 anos, gestante, procura a Unidade Básica de Saúde"><b>Começo de um caso clínico</b><span>Mulher de 32 anos, gestante, procura...</span></button>
+        <button class="sugestao" data-texto="Qual é a conduta mais adequada?&#10;&#10;(A)"><b>Só as alternativas</b><span>Qual é a conduta mais adequada? (A)</span></button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="area-prompt">
+  <div class="ajustes" id="ajustes">
+    <div class="ajuste">
+      <label for="temperatura">Temperatura <output id="v-temperatura"></output></label>
+      <input type="range" id="temperatura" min="0.1" max="1.5" step="0.1" value="0.7">
+      <small>Baixa: mais seguro e repetitivo. Alta: mais variado e com mais erros.</small>
+    </div>
+    <div class="ajuste">
+      <label for="topk">Top-k</label>
+      <select id="topk">
+        <option value="0">desligado</option>
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="40">40</option>
+      </select>
+      <small>Sorteia só entre os k caracteres mais prováveis.</small>
+    </div>
+    <div class="ajuste">
+      <label for="tamanho">Tamanho <output id="v-tamanho"></output></label>
+      <input type="range" id="tamanho" min="100" max="1500" step="50" value="500">
+      <small>Quantos caracteres gerar.</small>
+    </div>
+  </div>
+
+  <div class="caixa">
+    <textarea id="prompt" rows="1" placeholder="Escreva o começo do texto… (Enter envia, Shift+Enter pula linha)"></textarea>
+    <div class="acoes">
+      <button class="botao-icone" id="botao-ajustes" title="Ajustes da geração" aria-label="Ajustes da geração">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
+      <span class="resumo-ajustes" id="resumo-ajustes"></span>
+      <button class="botao-icone enviar" id="enviar" title="Enviar" aria-label="Enviar" disabled>
+        <svg id="icone-enviar" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <svg id="icone-parar" width="14" height="14" viewBox="0 0 24 24" style="display:none"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="alerta-vocab" id="alerta-vocab"></div>
+  <div class="aviso-final">O modelo imita o estilo das provas. O conteúdo é inventado: não use como informação médica.</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const campo = $("prompt"), botaoEnviar = $("enviar"), conversa = $("conversa"), rolagem = $("rolagem");
+let modelos = [], controle = null;
+const SEM_SERVIDOR = "O servidor não está rodando. No terminal, dentro da pasta do projeto, " +
+  "rode: python app.py — e use a página que ele abrir (http://localhost:8000).";
+
+// ------------------------------------------------ modelos
+async function carregarModelos() {
+  if (location.protocol === "file:") {
+    mostrarErro("Esta página não funciona aberta direto como arquivo. " + SEM_SERVIDOR);
+    return;
+  }
+  try {
+    modelos = await (await fetch("/modelos")).json();
+  } catch {
+    mostrarErro(SEM_SERVIDOR);
+    return;
+  }
+  $("modelo").innerHTML = modelos
+    .map((m) => `<option value="${m.nome}">${m.nome}</option>`).join("");
+  atualizarInfoModelo();
+}
+function modeloAtual() { return modelos.find((m) => m.nome === $("modelo").value); }
+function atualizarInfoModelo() {
+  const m = modeloAtual();
+  if (!m) return;
+  const milhoes = (m.parametros / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  $("info-modelo").textContent = `${milhoes} mi parâmetros · perplexidade ${m.perplexidade.toLocaleString("pt-BR")}`;
+  verificarVocabulario();
+}
+$("modelo").addEventListener("change", atualizarInfoModelo);
+
+// ------------------------------------------------ ajustes
+function atualizarAjustes() {
+  const t = Number($("temperatura").value).toLocaleString("pt-BR", { minimumFractionDigits: 1 });
+  $("v-temperatura").textContent = t;
+  $("v-tamanho").textContent = $("tamanho").value;
+  const k = $("topk").value === "0" ? "sem top-k" : `top-k ${$("topk").value}`;
+  $("resumo-ajustes").textContent = `temperatura ${t} · ${k} · ${$("tamanho").value} caracteres`;
+}
+["temperatura", "topk", "tamanho"].forEach((id) => $(id).addEventListener("input", atualizarAjustes));
+$("botao-ajustes").addEventListener("click", () => {
+  $("ajustes").classList.toggle("aberto");
+  $("botao-ajustes").classList.toggle("ativo");
+});
+
+// ------------------------------------------------ campo de texto
+function ajustarAltura() {
+  campo.style.height = "auto";
+  campo.style.height = Math.min(campo.scrollHeight, 200) + "px";
+}
+function caracteresDesconhecidos(texto) {
+  const m = modeloAtual();
+  if (!m) return [];
+  return [...new Set([...texto].filter((c) => !m.vocabulario.includes(c)))];
+}
+function verificarVocabulario() {
+  const fora = caracteresDesconhecidos(campo.value);
+  $("alerta-vocab").textContent = fora.length
+    ? `O modelo não conhece: ${fora.map((c) => (c === "\t" ? "tab" : `“${c}”`)).join(" ")}. Remova para enviar.`
+    : "";
+  botaoEnviar.disabled = !controle && (!campo.value || fora.length > 0);
+}
+campo.addEventListener("input", () => { ajustarAltura(); verificarVocabulario(); });
+campo.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (!botaoEnviar.disabled && !controle) enviar();
+  }
+});
+document.querySelectorAll(".sugestao").forEach((b) =>
+  b.addEventListener("click", () => {
+    campo.value = b.dataset.texto;
+    ajustarAltura(); verificarVocabulario(); campo.focus();
+  }));
+
+// ------------------------------------------------ geração
+function rolarParaFim() { rolagem.scrollTop = rolagem.scrollHeight; }
+function mostrarErro(msg) {
+  const d = document.createElement("div");
+  d.className = "erro"; d.textContent = msg;
+  conversa.appendChild(d); rolarParaFim();
+}
+function modoGerando(ativo) {
+  $("icone-enviar").style.display = ativo ? "none" : "";
+  $("icone-parar").style.display = ativo ? "" : "none";
+  botaoEnviar.title = ativo ? "Parar" : "Enviar";
+  botaoEnviar.disabled = false;
+  if (!ativo) verificarVocabulario();
+}
+
+async function gerar(inicio, seed) {
+  $("vazio")?.remove();
+  const pedido = {
+    modelo: $("modelo").value, inicio,
+    n: Number($("tamanho").value),
+    temperatura: Number($("temperatura").value),
+    top_k: Number($("topk").value),
+    seed,
+  };
+
+  const turno = document.createElement("div");
+  turno.className = "turno";
+  turno.innerHTML = `
+    <div class="pergunta"><div></div></div>
+    <div class="resposta"><div class="logo">M</div><div class="corpo">
+      <div class="texto"><span class="inicio"></span><span class="novo"></span><span class="cursor"></span></div>
+      <div class="rodape-resposta"></div>
+    </div></div>`;
+  turno.querySelector(".pergunta div").textContent = inicio;
+  turno.querySelector(".inicio").textContent = inicio;
+  conversa.appendChild(turno);
+  rolarParaFim();
+
+  const novo = turno.querySelector(".novo"), cursor = turno.querySelector(".cursor");
+  const rodape = turno.querySelector(".rodape-resposta");
+  controle = new AbortController();
+  modoGerando(true);
+  const t0 = performance.now();
+  let gerado = "", parado = false;
+
+  try {
+    const r = await fetch("/gerar", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(pedido), signal: controle.signal,
+    });
+    if (!r.ok) throw new Error((await r.json()).erro || "Erro na geração.");
+    const leitor = r.body.getReader(), decodificador = new TextDecoder();
+    while (true) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      gerado += decodificador.decode(value, { stream: true });
+      novo.textContent = gerado;
+      const perto = rolagem.scrollHeight - rolagem.scrollTop - rolagem.clientHeight < 120;
+      if (perto) rolarParaFim();
+    }
+  } catch (e) {
+    if (e.name === "AbortError") parado = true;
+    else {
+      turno.querySelector(".resposta").remove();
+      // fetch só lança TypeError quando não consegue conectar (servidor desligado).
+      mostrarErro(e instanceof TypeError ? SEM_SERVIDOR : e.message);
+    }
+  } finally {
+    cursor.remove();
+    controle = null;
+    modoGerando(false);
+  }
+  if (!turno.querySelector(".resposta")) return;
+
+  const segundos = (performance.now() - t0) / 1000;
+  const k = pedido.top_k ? `top-k ${pedido.top_k}` : "sem top-k";
+  rodape.innerHTML = `<span>${pedido.modelo} · temperatura ${pedido.temperatura.toLocaleString("pt-BR")} · ${k} · ` +
+    `${gerado.length} caracteres em ${segundos.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s` +
+    `${parado ? " · interrompido" : ""}</span>`;
+  const copiar = document.createElement("button");
+  copiar.textContent = "Copiar";
+  copiar.onclick = async () => {
+    await navigator.clipboard.writeText(inicio + gerado);
+    copiar.textContent = "Copiado"; setTimeout(() => (copiar.textContent = "Copiar"), 1500);
+  };
+  const outra = document.createElement("button");
+  outra.textContent = "Gerar outra versão";
+  outra.onclick = () => { if (!controle) gerar(inicio, Math.floor(Math.random() * 1e9)); };
+  rodape.append(copiar, outra);
+}
+
+function enviar() {
+  const inicio = campo.value;
+  campo.value = ""; ajustarAltura();
+  gerar(inicio, Math.floor(Math.random() * 1e9));
+}
+botaoEnviar.addEventListener("click", () => {
+  if (controle) controle.abort();
+  else if (!botaoEnviar.disabled) enviar();
+});
+
+atualizarAjustes();
+carregarModelos();
+campo.focus();
+</script>
+</body>
+</html>
