@@ -18,7 +18,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "data"))
 
-from tokenizer import CharTokenizer  # noqa: E402
+from char_tokenizer import CharTokenizer  # noqa: E402
 from prepare import limpar, formatar  # noqa: E402
 from loader import carregar_tokens, get_batch  # noqa: E402
 
@@ -109,4 +109,4 @@ if __name__ == "__main__":
         if nome.startswith("test_"):
             fn()
             print(f"ok  {nome}")
-    print("Todos os testes da Etapa 1 passaram.")
+    print("Todos os testes da Etapa 1 passaram com sucesso.")

@@ -30,7 +30,7 @@ import numpy as np
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
-from tokenizer import CharTokenizer, char_frequencies  # noqa: E402
+from char_tokenizer import CharTokenizer, char_frequencies  # noqa: E402
 
 DATASET_HF = "Larxel/healthqa-br"
 PARQUET_HF = f"https://huggingface.co/api/datasets/{DATASET_HF}/parquet/default/train/0.parquet"

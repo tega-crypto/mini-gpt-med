@@ -8,7 +8,7 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 
 | Etapa | Conteúdo | Status |
 | --- | --- | --- |
-| 1. Dados e tokenização | `data/prepare.py`, `tokenizer.py`, `data/loader.py` | Pronta |
+| 1. Dados e tokenização | `data/prepare.py`, `char_tokenizer.py`, `data/loader.py` | Pronta |
 | 2. Arquitetura | `model.py` | Semana 2 |
 | 3. Treino | `train.py` | Semana 3 |
 | 4. Geração e avaliação | `generate.py` | Semana 3 |
@@ -19,7 +19,7 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 ```
 data/prepare.py        baixa, limpa, separa e tokeniza o corpus
 data/loader.py         forma os lotes (x, y) para o treino
-tokenizer.py           tokenizador em nível de caractere
+char_tokenizer.py      tokenizador em nível de caractere
 configs/base.json      hiperparâmetros iniciais
 notebooks/             exploração (rodar no Kaggle)
 tests/test_etapa1.py   testes de sanidade, rodam sem internet
