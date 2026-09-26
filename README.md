@@ -11,7 +11,7 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 | 1. Dados e tokenização | `data/prepare.py`, `char_tokenizer.py`, `data/loader.py` | Pronta |
 | 2. Arquitetura | `model.py` | Pronta |
 | 3. Treino | `train.py` | Pronta |
-| 4. Geração e avaliação | `generate.py` | Semana 3 |
+| 4. Geração e avaliação | `generate.py` | Pronta |
 | 5. Experimentos | `configs/`, `results/` | Semana 4 |
 
 ## Estrutura
@@ -24,9 +24,11 @@ configs/base.json      hiperparâmetros iniciais
 notebooks/             exploração (rodar no Kaggle)
 model.py               o Transformer: atenção causal, blocos e cabeça de saída
 train.py               loop de treino, perda de validação, checkpoint e curva
+generate.py            gera texto com temperatura e top-k; compara temperaturas
 tests/test_etapa1.py   testes de sanidade, rodam sem internet
 tests/test_etapa2.py   testes do modelo: formas, causalidade, perda inicial
 tests/test_etapa3.py   treino curto com dados falsos: a perda precisa cair
+tests/test_etapa4.py   geração: contexto, top-k, temperatura, reprodutibilidade
 checkpoints/           modelos salvos (.pt), ignorados pelo git
 results/               curvas de perda e amostras geradas
 ```
@@ -50,6 +52,15 @@ python train.py --config configs/outra.json   # outro experimento (Etapa 5)
 ```
 
 O modelo com a menor perda de validação fica em `checkpoints/<nome da config>.pt`. A curva e as perdas ficam em `results/<nome da config>/`. O script usa a GPU sozinho quando ela existe (no Kaggle: **Settings → Accelerator → GPU**).
+
+## Como gerar texto (Etapa 4)
+
+```bash
+python generate.py                                       # 500 caracteres a partir de "### Revalida"
+python generate.py --inicio "### Enare" --temperatura 0.5 --top-k 10
+python generate.py --amostras 3 --n 300
+python generate.py --comparar                            # grava results/base/amostras.md
+```
 
 ## Dados
 
@@ -137,6 +148,30 @@ Uma mulher de 64 anos negatinas de idade, com sinais de 10 para a criança de en
 (A) prescrição do soro abdominal e metabólico.
 (B) incluição para o diagnóstico de estrepmetido.
 ```
+
+## Resultados da Etapa 4 (para o relatório)
+
+A geração é **auto-regressiva**: o modelo prevê um caractere, ele é colado no fim do texto e o texto volta para o modelo. O modelo só enxerga os últimos 64 caracteres (`block_size`).
+
+Dois controles do sorteio:
+- **Temperatura:** divide os logits antes do softmax. Baixa deixa o texto seguro e repetitivo; alta deixa variado e cheio de erros.
+- **Top-k:** só sorteia entre os k caracteres mais prováveis e corta os erros mais estranhos.
+
+**Avaliação.** A perplexidade de validação é e^1,25 ≈ **3,5**: a cada caractere, o modelo fica em dúvida como se escolhesse entre 3 ou 4 opções, contra 125 no início. Para medir a qualidade do texto gerado, contamos a fração de palavras geradas (3+ letras) que existem no corpus. Média de 5 amostras de 400 caracteres a partir de `### Revalida`:
+
+| Temperatura | Palavras reais | Palavras reais com top-k = 10 |
+| --- | --- | --- |
+| 0,5 | 89% | 90% |
+| 0,8 | 80% | 83% |
+| 1,0 | 71% | 72% |
+| 1,2 | 57% | 62% |
+
+- Temperaturas baixas acertam mais palavras, mas repetem expressões ("de saúde de ... de saúde").
+- O top-k ajuda mais nas temperaturas altas, onde a cauda de caracteres improváveis pesa mais.
+- Em todas as temperaturas o **formato** sai certo: cabeçalho `### Prova Ano | Área`, enunciado, alternativas `(A)`, `(B)`... e `Gabarito:`. O **conteúdo** não faz sentido médico: o modelo aprendeu a forma das questões, não medicina.
+- Métrica limitada: ela aceita palavras reais em sequências sem sentido.
+
+Amostras completas em [`results/base/amostras.md`](results/base/amostras.md).
 
 ## Referências
 
