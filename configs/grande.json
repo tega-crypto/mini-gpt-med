@@ -1,0 +1,14 @@
+{
+  "_comentario": "Experimento da Etapa 5: modelo maior. Só n_embd, n_head e n_layer mudam em relação à base.",
+  "block_size": 64,
+  "batch_size": 32,
+  "n_embd": 256,
+  "n_head": 8,
+  "n_layer": 6,
+  "dropout": 0.1,
+  "learning_rate": 0.001,
+  "max_iters": 5000,
+  "eval_interval": 250,
+  "eval_iters": 100,
+  "seed": 1337
+}

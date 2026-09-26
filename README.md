@@ -12,7 +12,7 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 | 2. Arquitetura | `model.py` | Pronta |
 | 3. Treino | `train.py` | Pronta |
 | 4. Geração e avaliação | `generate.py` | Pronta |
-| 5. Experimentos | `configs/`, `results/` | Semana 4 |
+| 5. Experimentos | `configs/`, `compare.py`, `results/` | Primeiro experimento pronto |
 
 ## Estrutura
 
@@ -25,6 +25,9 @@ notebooks/             exploração (rodar no Kaggle)
 model.py               o Transformer: atenção causal, blocos e cabeça de saída
 train.py               loop de treino, perda de validação, checkpoint e curva
 generate.py            gera texto com temperatura e top-k; compara temperaturas
+compare.py             compara os experimentos: tabela e curvas em results/
+configs/grande.json    experimento da Etapa 5: modelo 5,8x maior
+relatorio/             relatório de estudo em LaTeX (relatorio.pdf)
 tests/test_etapa1.py   testes de sanidade, rodam sem internet
 tests/test_etapa2.py   testes do modelo: formas, causalidade, perda inicial
 tests/test_etapa3.py   treino curto com dados falsos: a perda precisa cair
@@ -172,6 +175,32 @@ Dois controles do sorteio:
 - Métrica limitada: ela aceita palavras reais em sequências sem sentido.
 
 Amostras completas em [`results/base/amostras.md`](results/base/amostras.md).
+
+## Resultados da Etapa 5 (para o relatório)
+
+Experimento: modelo maior (`configs/grande.json`), mudando só o tamanho. Passos, lote, contexto, taxa de aprendizado e dropout iguais aos da base.
+
+```bash
+python train.py --config configs/grande.json   # cerca de 48 min na CPU
+python compare.py                              # grava results/comparacao.md e comparacao.png
+```
+
+Perdas medidas no conjunto de validação inteiro (508.160 posições):
+
+| Modelo | Parâmetros | Perda val. | Perplexidade | Palavras reais (τ = 0,8) | Tempo na CPU |
+| --- | --- | --- | --- | --- | --- |
+| 6-grama por contagem | – | 1,142 | 3,13 | – | – |
+| Transformer base | 833.661 | 1,249 | 3,49 | 80% | 13 min |
+| Transformer grande | 4.819.581 | **1,124** | **3,08** | **87%** | 48 min |
+
+![Comparação](results/comparacao.png)
+
+- O modelo grande terminou 0,125 nats abaixo da base e passou o 6-grama, mas por pouco.
+- Ele começa mais devagar: até o passo 1.500 fica acima da base. Com o mesmo tempo de CPU (13 min), a base ganha.
+- No fim, o treino (1,09) fica abaixo da validação (1,13): primeiro sinal de overfitting.
+- Foi um treino de cada, com uma semente só. Repetir com outras sementes deixaria a conclusão mais segura.
+
+O relatório completo, com a teoria de cada etapa, está em [`relatorio/relatorio.pdf`](relatorio/relatorio.pdf).
 
 ## Referências
 
