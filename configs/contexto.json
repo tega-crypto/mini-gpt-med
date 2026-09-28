@@ -1,0 +1,14 @@
+{
+  "_comentario": "Experimento da Etapa 5: mais contexto. Igual ao grande.json, só muda block_size (64 -> 128).",
+  "block_size": 128,
+  "batch_size": 32,
+  "n_embd": 256,
+  "n_head": 8,
+  "n_layer": 6,
+  "dropout": 0.1,
+  "learning_rate": 0.001,
+  "max_iters": 5000,
+  "eval_interval": 250,
+  "eval_iters": 100,
+  "seed": 1337
+}

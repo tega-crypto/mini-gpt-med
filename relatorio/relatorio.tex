@@ -34,6 +34,7 @@
 \DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
 
 \graphicspath{{../results/}}
+\emergencystretch=3em % nomes de arquivo em \texttt não quebram: deixa o espaço entre palavras esticar
 
 % ---------------------------------------------------------------- cores e caixas
 \definecolor{azul}{HTML}{1F4E79}
@@ -86,7 +87,7 @@ com questões do Revalida e do Enare}
 \maketitle
 
 \begin{abstract}
-\noindent Este relatório descreve, passo a passo, a construção de um modelo de linguagem do tipo GPT, escrito do zero em PyTorch e treinado com 5.632 questões de provas médicas brasileiras. O modelo prevê o próximo \emph{caractere} de um texto. Cada etapa do projeto (dados e tokenização, arquitetura, treino, geração e experimentos) é apresentada em três camadas: a \textbf{teoria} que a justifica, com referência aos livros-texto; o \textbf{código} que a implementa; e os \textbf{números} obtidos. O modelo base, com 833.661 parâmetros, reduz a perda de validação de 4,90 para 1,25 nats por caractere em 13 minutos de CPU e aprende o formato das questões, mas não o conteúdo médico. Uma comparação honesta com modelos de $n$-gramas mostra que, com esse orçamento de treino, um modelo de 6-gramas (1,14) ainda o supera. Na Seção~\ref{sec:experimentos}, um modelo 5,8 vezes maior, treinado pelo mesmo número de passos, chega a 1,12 e passa o 6-grama por pouco.
+\noindent Este relatório descreve, passo a passo, a construção de um modelo de linguagem do tipo GPT, escrito do zero em PyTorch e treinado com 5.632 questões de provas médicas brasileiras. O modelo prevê o próximo \emph{caractere} de um texto. Cada etapa do projeto (dados e tokenização, arquitetura, treino, geração e experimentos) é apresentada em três camadas: a \textbf{teoria} que a justifica, com referência aos livros-texto; o \textbf{código} que a implementa; e os \textbf{números} obtidos. O modelo base, com 833.661 parâmetros, reduz a perda de validação de 4,90 para 1,25 nats por caractere em 13 minutos de CPU e aprende o formato das questões, mas não o conteúdo médico. Uma comparação honesta com modelos de $n$-gramas mostra que, com esse orçamento de treino, um modelo de 6-gramas (1,14) ainda o supera. Na Seção~\ref{sec:experimentos}, com uma medida mais justa (janela deslizante), um modelo 5,8 vezes maior chega a 1,055 e passa o 6-grama; aumentar o contexto de 64 para 128 caracteres leva a perda a 1,015 e faz as alternativas geradas saírem em ordem em 74,6\% dos casos, contra 42,7\%.
 \end{abstract}
 
 \tableofcontents
@@ -104,7 +105,7 @@ O projeto tem cinco etapas, e cada uma virou um arquivo do repositório:
 Etapa & O que faz & Arquivo & Seção \\
 \midrule
 1. Dados e tokenização & texto $\to$ números & \texttt{data/prepare.py} & \ref{sec:dados} \\
- & & \texttt{char\_tokenizer.py} & \\\
+ & & \texttt{char\_tokenizer.py} & \\
 2. Arquitetura & números $\to$ probabilidades & \texttt{model.py} & \ref{sec:arquitetura} \\
 3. Treino & ajusta os pesos & \texttt{train.py} & \ref{sec:treino} \\
 4. Geração e avaliação & probabilidades $\to$ texto & \texttt{generate.py} & \ref{sec:geracao} \\
@@ -785,7 +786,7 @@ A métrica de palavras reais aceita frases sem sentido formadas por palavras rea
 \end{exercicios}
 
 % =====================================================================
-\section{Etapa 5: experimento com um modelo maior}
+\section{Etapa 5: experimentos}
 \label{sec:experimentos}
 % =====================================================================
 
@@ -801,7 +802,8 @@ A métrica de palavras reais aceita frases sem sentido formadas por palavras rea
 \item \textbf{Treino.} AdamW com dropout, avaliação periódica e checkpoint do melhor modelo. O modelo base chega a 1,25 nats por caractere, sem overfitting e ainda sem ter convergido.
 \item \textbf{Geração.} O modelo aprende o \emph{formato} das questões, mas não o \emph{conteúdo}. A temperatura controla a troca entre acerto e variedade.
 \item \textbf{Régua.} Um 6-grama por contagem (1,14) supera o modelo base. Comparar com uma régua simples é o que dá sentido aos números.
-\item \textbf{Escala.} Com 5,8 vezes mais parâmetros e os mesmos 5.000 passos, a perda caiu para 1,12, passando o 6-grama por pouco. O modelo maior começa mais devagar, custa 3,7 vezes mais tempo e mostra o primeiro sinal de separação entre treino e validação.
+\item \textbf{Escala.} Com 5,8 vezes mais parâmetros e os mesmos 5.000 passos, a perda caiu para 1,055 (janela deslizante), passando o 6-grama. O modelo maior começa mais devagar, custa 3,7 vezes mais tempo e mostra o primeiro sinal de separação entre treino e validação.
+\item \textbf{Contexto.} Com 128 caracteres de contexto em vez de 64, a perda caiu para 1,015 e a ordem das alternativas geradas passou de 42,7\% para 74,6\% de acertos. A perda média esconde parte do ganho: o contexto longo importa em poucos pontos do texto, mas são os que lhe dão estrutura.
 \end{enumerate}
 
 Ideias para continuar: treinar por mais passos, com uma taxa de aprendizado que decai ao longo do treino (\emph{cosine schedule}); aumentar o contexto (\texttt{block\_size} 128 ou 256); repetir os treinos com outras sementes; trocar a tokenização por BPE \cite{sennrich}; treinar na GPU do Kaggle.

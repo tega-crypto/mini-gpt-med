@@ -188,27 +188,31 @@ Amostras completas em [`results/base/amostras.md`](results/base/amostras.md).
 
 ## Resultados da Etapa 5 (para o relatório)
 
-Experimento: modelo maior (`configs/grande.json`), mudando só o tamanho. Passos, lote, contexto, taxa de aprendizado e dropout iguais aos da base.
+Dois experimentos, mudando uma coisa por vez:
+1. **Modelo maior** (`configs/grande.json`): só o tamanho muda (5,8 vezes mais parâmetros).
+2. **Mais contexto** (`configs/contexto.json`): igual ao grande, só o `block_size` muda de 64 para 128.
 
 ```bash
-python train.py --config configs/grande.json   # cerca de 48 min na CPU
-python compare.py                              # grava results/comparacao.md e comparacao.png
+python train.py --config configs/grande.json     # cerca de 48 min na CPU
+python train.py --config configs/contexto.json   # cerca de 2 h na CPU
+python compare.py                                # grava results/comparacao.md e comparacao.png
 ```
 
-Perdas medidas no conjunto de validação inteiro (508.160 posições):
+Perdas no conjunto de validação inteiro, com **janela deslizante**: cada caractere é previsto com pelo menos metade do contexto do modelo. Janelas lado a lado dão pouco contexto aos primeiros caracteres de cada janela e tornam injusta a comparação entre contextos diferentes. Alternativas em ordem: fração dos pares de alternativas seguidas que saem em ordem, `(A)` → `(B)`, em 90 textos de 1.000 caracteres por modelo.
 
-| Modelo | Parâmetros | Perda val. | Perplexidade | Palavras reais (τ = 0,8) | Tempo na CPU |
-| --- | --- | --- | --- | --- | --- |
-| 6-grama por contagem | – | 1,142 | 3,13 | – | – |
-| Transformer base | 833.661 | 1,249 | 3,49 | 80% | 13 min |
-| Transformer grande | 4.819.581 | **1,124** | **3,08** | **87%** | 48 min |
+| Modelo | Parâmetros | Contexto | Perda val. | Perplexidade | Alternativas em ordem | Tempo na CPU |
+| --- | --- | --- | --- | --- | --- | --- |
+| 6-grama por contagem | – | 5 | 1,142 | 3,13 | – | – |
+| Transformer base | 833.661 | 64 | 1,193 | 3,30 | – | 13 min |
+| Transformer grande | 4.819.581 | 64 | 1,055 | 2,87 | 42,7% (76/178) | 48 min |
+| Transformer contexto | 4.835.965 | 128 | **1,015** | **2,76** | **74,6% (94/126)** | 120 min |
 
 ![Comparação](results/comparacao.png)
 
-- O modelo grande terminou 0,125 nats abaixo da base e passou o 6-grama, mas por pouco.
-- Ele começa mais devagar: até o passo 1.500 fica acima da base. Com o mesmo tempo de CPU (13 min), a base ganha.
-- No fim, o treino (1,09) fica abaixo da validação (1,13): primeiro sinal de overfitting.
-- Foi um treino de cada, com uma semente só. Repetir com outras sementes deixaria a conclusão mais segura.
+- **Tamanho:** o grande terminou bem abaixo da base e passou o 6-grama. Ele começa mais devagar e, com o mesmo tempo de CPU (13 min), a base ganha.
+- **Contexto:** a perda caiu pouco (1,055 → 1,015), mas a ordem das alternativas saltou de 42,7% para 74,6% (teste de proporções: z ≈ 5,5). O contexto longo importa em poucos pontos do texto, mas são os que dão estrutura à questão.
+- O modelo de contexto 128 fica quase parado até o passo 1.000 e passa o grande perto do passo 2.750.
+- Foi um treino de cada, com uma semente só. Repetir com outras sementes deixaria as conclusões mais seguras.
 
 O relatório completo, com a teoria de cada etapa, está em [`relatorio/relatorio.pdf`](relatorio/relatorio.pdf).
 
