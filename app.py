@@ -3,6 +3,7 @@ Interface no navegador para testar o modelo, com barra de prompt.
 
     python app.py                  # abre http://localhost:8000 no navegador
     python app.py --porta 8080
+    python app.py --rede           # celulares na mesma rede Wi-Fi também acessam
 
 Usa só a biblioteca padrão do Python (http.server), sem instalar nada.
 O texto aparece caractere por caractere, conforme o modelo gera:
@@ -12,6 +13,7 @@ cada caractere é enviado ao navegador assim que é sorteado.
 import argparse
 import json
 import math
+import socket
 import sys
 import threading
 import webbrowser
@@ -29,9 +31,13 @@ from generate import carregar_modelo  # noqa: E402
 PAGINA = RAIZ / "interface" / "index.html"
 CHECKPOINTS = RAIZ / "checkpoints"
 MAX_CARACTERES = 2000
+GERACOES_SIMULTANEAS = 2  # com a turma toda no celular, os outros pedidos esperam na fila
 
 _modelos = {}
+_lista_modelos = None
 _trava = threading.Lock()  # carregar o mesmo modelo duas vezes ao mesmo tempo seria desperdício
+_vagas = threading.Semaphore(GERACOES_SIMULTANEAS)
+_endereco_rede = None  # preenchido pelo main() quando o servidor roda com --rede
 
 
 def modelo(nome):
@@ -41,7 +47,30 @@ def modelo(nome):
         return _modelos[nome]
 
 
+def ip_na_rede():
+    """
+    IP deste computador na rede local, como 192.168.0.12.
+    Um socket UDP "conectado" a um endereço externo revela qual placa de rede
+    o sistema usaria para sair; nenhum pacote é enviado.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except OSError:
+        return socket.gethostbyname(socket.gethostname())
+
+
 def listar_modelos():
+    # Ler cada checkpoint do disco é lento: a lista é montada uma vez só.
+    global _lista_modelos
+    with _trava:
+        if _lista_modelos is None:
+            _lista_modelos = montar_lista_modelos()
+        return _lista_modelos
+
+
+def montar_lista_modelos():
     lista = []
     for caminho in sorted(CHECKPOINTS.glob("*.pt")):
         ckpt = torch.load(caminho, map_location="cpu", weights_only=True)
@@ -92,6 +121,8 @@ class Servidor(BaseHTTPRequestHandler):
             self.responder(200, PAGINA.read_bytes(), "text/html; charset=utf-8")
         elif self.path == "/modelos":
             self.responder(200, listar_modelos())
+        elif self.path == "/info":
+            self.responder(200, {"endereco_rede": _endereco_rede})
         else:
             self.responder(404, {"erro": "não encontrado"})
 
@@ -125,9 +156,10 @@ class Servidor(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         try:
-            for ch in gerar_caracteres(gpt, tok, inicio, n, temperatura, top_k, seed):
-                self.wfile.write(ch.encode("utf-8"))
-                self.wfile.flush()
+            with _vagas:  # espera uma vaga se já houver GERACOES_SIMULTANEAS rodando
+                for ch in gerar_caracteres(gpt, tok, inicio, n, temperatura, top_k, seed):
+                    self.wfile.write(ch.encode("utf-8"))
+                    self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass  # o usuário apertou "parar": o navegador fechou a conexão
 
@@ -138,13 +170,22 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--porta", type=int, default=8000)
     p.add_argument("--sem-navegador", action="store_true", help="não abre o navegador sozinho")
+    p.add_argument("--rede", action="store_true",
+                   help="aceita outros aparelhos da mesma rede Wi-Fi (sem isso, só este computador)")
     args = p.parse_args()
 
     if not list(CHECKPOINTS.glob("*.pt")):
         sys.exit("Nenhum modelo em checkpoints/. Treine antes: python train.py")
     endereco = f"http://localhost:{args.porta}"
-    servidor = ThreadingHTTPServer(("127.0.0.1", args.porta), Servidor)
+    # 127.0.0.1 só atende este computador; 0.0.0.0 atende todas as placas de rede.
+    servidor = ThreadingHTTPServer(("0.0.0.0" if args.rede else "127.0.0.1", args.porta), Servidor)
     print(f"Mini-GPT Médico rodando em {endereco}  (Ctrl+C para encerrar)")
+    if args.rede:
+        global _endereco_rede
+        _endereco_rede = f"http://{ip_na_rede()}:{args.porta}"
+        print(f"Na rede Wi-Fi, abra no celular: {_endereco_rede}")
+        print("Qualquer pessoa conectada a esta rede pode usar a página enquanto o servidor estiver aberto.")
+        print("Se o Windows perguntar sobre o Firewall, permita o acesso em redes privadas.")
     if not args.sem_navegador:
         webbrowser.open(endereco)
     try:

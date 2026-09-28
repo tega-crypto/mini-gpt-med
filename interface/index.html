@@ -69,6 +69,14 @@
     background: var(--fundo-2); border: 1px solid var(--borda);
     border-radius: 10px; padding: 4px 6px 4px 12px; font-size: 14px;
   }
+  .marca { white-space: nowrap; }
+  @media (max-width: 1000px) { .seletor .info { display: none; } }
+  .rede {
+    white-space: nowrap; font-size: 15px; color: var(--texto-2);
+    background: var(--destaque-suave); border-radius: 999px; padding: 6px 16px;
+  }
+  .rede b { color: var(--destaque); font-family: ui-monospace, Consolas, monospace; font-size: 17px; }
+  .rede[hidden] { display: none; }
   .seletor select { background: transparent; border: 0; padding: 4px; font-weight: 600; outline: none; }
   .seletor select option { background: var(--fundo); }
   .seletor .info { color: var(--texto-3); }
@@ -161,6 +169,7 @@
   @media (max-width: 640px) {
     header { padding: 10px 14px; }
     .seletor .info { display: none; }
+    .rede { display: none; }  /* quem abriu no celular já está conectado */
     .coluna { padding: 16px 14px 8px; }
     .sugestoes { grid-template-columns: 1fr; }
     .area-prompt { padding: 6px 12px 10px; }
@@ -173,6 +182,7 @@
 
 <header>
   <div class="marca"><div class="logo">M</div>Mini-GPT Médico</div>
+  <div class="rede" id="rede" hidden>No celular, na mesma rede Wi-Fi: <b id="endereco-rede"></b></div>
   <div class="seletor">
     <span class="info" id="info-modelo"></span>
     <select id="modelo" aria-label="Modelo"></select>
@@ -414,8 +424,19 @@ botaoEnviar.addEventListener("click", () => {
   else if (!botaoEnviar.disabled) enviar();
 });
 
+async function mostrarEnderecoRede() {
+  try {
+    const { endereco_rede } = await (await fetch("/info")).json();
+    if (endereco_rede) {
+      $("endereco-rede").textContent = endereco_rede;
+      $("rede").hidden = false;
+    }
+  } catch { /* sem servidor: carregarModelos já avisa */ }
+}
+
 atualizarAjustes();
 carregarModelos();
+mostrarEnderecoRede();
 campo.focus();
 </script>
 </body>

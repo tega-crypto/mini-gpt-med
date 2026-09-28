@@ -66,6 +66,17 @@ python app.py
 
 Abre `http://localhost:8000` com uma barra de prompt, no estilo do ChatGPT. O texto aparece caractere por caractere, conforme o modelo gera. Dá para escolher o modelo (`base` ou `grande`), a temperatura, o top-k e o tamanho do texto. Não precisa instalar nada além do `requirements.txt`: o servidor usa o `http.server` do próprio Python. Para encerrar, aperte Ctrl+C no terminal.
 
+Para a turma acessar pelo celular, na mesma rede Wi-Fi:
+
+```bash
+python app.py --rede
+```
+
+O terminal e o topo da página mostram o endereço para digitar no celular, como `http://192.168.0.12:8000`. No máximo duas gerações rodam ao mesmo tempo; os outros pedidos esperam na fila. Cuidados:
+- Qualquer pessoa na mesma rede consegue abrir a página enquanto o servidor estiver aberto. Feche com Ctrl+C depois da apresentação.
+- Na primeira vez, o Windows pode perguntar sobre o Firewall. Permita só em **redes privadas**.
+- Muitas redes de faculdade bloqueiam a conexão entre aparelhos. Se o celular não abrir a página, use o roteador do celular: ligue o notebook no hotspot do seu celular e peça para a turma conectar nele também.
+
 ## Como gerar texto (Etapa 4)
 
 ```bash
