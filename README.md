@@ -12,7 +12,8 @@ Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de prova
 | 2. Arquitetura | `model.py` | Pronta |
 | 3. Treino | `train.py` | Pronta |
 | 4. Geração e avaliação | `generate.py` | Pronta |
-| 5. Experimentos | `configs/`, `compare.py`, `results/` | Primeiro experimento pronto |
+| 5. Experimentos | `configs/`, `compare.py`, `results/` | Pronta (base, grande e contexto) |
+| 6. Interface | `app.py`, `interface/index.html` | Pronta |
 
 ## Estrutura
 
@@ -27,6 +28,7 @@ train.py               loop de treino, perda de validação, checkpoint e curva
 generate.py            gera texto com temperatura e top-k; compara temperaturas
 compare.py             compara os experimentos: tabela e curvas em results/
 configs/grande.json    experimento da Etapa 5: modelo 5,8x maior
+configs/contexto.json  experimento da Etapa 5: grande com contexto 128
 relatorio/             relatório de estudo em LaTeX (relatorio.pdf)
 app.py                 interface no navegador, com barra de prompt
 interface/index.html   a página da interface
@@ -231,3 +233,9 @@ O relatório completo, com a teoria de cada etapa, está em [`relatorio/relatori
 
 - Karpathy, *Let's build GPT: from scratch, in code, spelled out* (vídeo) e repositório nanoGPT.
 - Vaswani et al., *Attention Is All You Need* (2017).
+
+## Licença
+
+Código sob a licença MIT (veja [`LICENSE`](LICENSE)).
+
+Os dados vêm do [HealthQA-BR](https://huggingface.co/datasets/Larxel/healthqa-br), publicado sob CC-BY 4.0. O corpus não é distribuído neste repositório: o `data/prepare.py` baixa e processa o conjunto original. Ao usar os dados ou textos gerados a partir deles, cite o HealthQA-BR como fonte.
