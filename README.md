@@ -1,98 +1,100 @@
-# Mini-GPT Médico
+# Medical Mini-GPT
 
-Um GPT pequeno, implementado do zero em PyTorch, treinado com questões de provas médicas brasileiras (Revalida e Enare). Trabalho de faculdade em grupo, baseado no nanoGPT de Andrej Karpathy.
+A small GPT, built from scratch in PyTorch and trained on questions from Brazilian medical exams (Revalida and Enare). A university group project based on Andrej Karpathy's nanoGPT.
 
-> O modelo prevê o próximo caractere. Ele imita o estilo das questões, mas **não** dá informação médica confiável.
+> The model predicts the next character. It imitates the style of the questions, but it does **not** give reliable medical information.
+
+The code, comments and corpus are in Portuguese, so command-line flags such as `--temperatura` keep their Portuguese names.
 
 ## Status
 
-| Etapa | Conteúdo | Status |
+| Step | Contents | Status |
 | --- | --- | --- |
-| 1. Dados e tokenização | `data/prepare.py`, `char_tokenizer.py`, `data/loader.py` | Pronta |
-| 2. Arquitetura | `model.py` | Pronta |
-| 3. Treino | `train.py` | Pronta |
-| 4. Geração e avaliação | `generate.py` | Pronta |
-| 5. Experimentos | `configs/`, `compare.py`, `results/` | Pronta (base, grande e contexto) |
-| 6. Interface | `app.py`, `interface/index.html` | Pronta |
+| 1. Data and tokenization | `data/prepare.py`, `char_tokenizer.py`, `data/loader.py` | Done |
+| 2. Architecture | `model.py` | Done |
+| 3. Training | `train.py` | Done |
+| 4. Generation and evaluation | `generate.py` | Done |
+| 5. Experiments | `configs/`, `compare.py`, `results/` | Done (base, large and context) |
+| 6. Interface | `app.py`, `interface/index.html` | Done |
 
-## Estrutura
+## Layout
 
 ```
-data/prepare.py        baixa, limpa, separa e tokeniza o corpus
-data/loader.py         forma os lotes (x, y) para o treino
-char_tokenizer.py      tokenizador em nível de caractere
-configs/base.json      hiperparâmetros iniciais
-notebooks/             exploração (rodar no Kaggle)
-model.py               o Transformer: atenção causal, blocos e cabeça de saída
-train.py               loop de treino, perda de validação, checkpoint e curva
-generate.py            gera texto com temperatura e top-k; compara temperaturas
-compare.py             compara os experimentos: tabela e curvas em results/
-configs/grande.json    experimento da Etapa 5: modelo 5,8x maior
-configs/contexto.json  experimento da Etapa 5: grande com contexto 128
-relatorio/             relatório de estudo em LaTeX (relatorio.pdf)
-app.py                 interface no navegador, com barra de prompt
-interface/index.html   a página da interface
-tests/test_etapa1.py   testes de sanidade, rodam sem internet
-tests/test_etapa2.py   testes do modelo: formas, causalidade, perda inicial
-tests/test_etapa3.py   treino curto com dados falsos: a perda precisa cair
-tests/test_etapa4.py   geração: contexto, top-k, temperatura, reprodutibilidade
-checkpoints/           modelos salvos (.pt), ignorados pelo git
-results/               curvas de perda e amostras geradas
+data/prepare.py        downloads, cleans, splits and tokenizes the corpus
+data/loader.py         builds the (x, y) batches for training
+char_tokenizer.py      character-level tokenizer
+configs/base.json      initial hyperparameters
+notebooks/             data exploration (run on Kaggle)
+model.py               the Transformer: causal attention, blocks and output head
+train.py               training loop, validation loss, checkpoint and loss curve
+generate.py            generates text with temperature and top-k; compares temperatures
+compare.py             compares the experiments: table and curves in results/
+configs/grande.json    step 5 experiment: a 5.8x larger model
+configs/contexto.json  step 5 experiment: the large model with context 128
+relatorio/             study report in LaTeX (relatorio.pdf, in Portuguese)
+app.py                 browser interface with a prompt bar
+interface/index.html   the interface page
+tests/test_etapa1.py   sanity tests, run without internet
+tests/test_etapa2.py   model tests: shapes, causality, initial loss
+tests/test_etapa3.py   short training run on fake data: the loss must drop
+tests/test_etapa4.py   generation: context, top-k, temperature, reproducibility
+checkpoints/           saved models (.pt), ignored by git
+results/               loss curves and generated samples
 ```
 
-## Como rodar a Etapa 1
+## Running step 1
 
 ```bash
 pip install -r requirements.txt
-python tests/test_etapa1.py   # confere se está tudo certo (não precisa de internet)
-python data/prepare.py        # baixa o HealthQA-BR e gera data/processed/
+python tests/test_etapa1.py   # checks that everything is in place (no internet needed)
+python data/prepare.py        # downloads HealthQA-BR and writes data/processed/
 ```
 
-No Kaggle: crie um notebook, ative **Settings → Internet: On**, clone o repositório e rode `notebooks/01_exploracao_dados.ipynb`.
+On Kaggle: create a notebook, turn on **Settings → Internet: On**, clone the repository and run `notebooks/01_exploracao_dados.ipynb`.
 
-## Como treinar (Etapa 3)
+## Training (step 3)
 
 ```bash
-python train.py                      # configs/base.json, 5.000 passos
-python train.py --max-iters 300      # teste rápido, cerca de 1 minuto na CPU
-python train.py --config configs/outra.json   # outro experimento (Etapa 5)
+python train.py                      # configs/base.json, 5,000 steps
+python train.py --max-iters 300      # quick test, about 1 minute on CPU
+python train.py --config configs/outra.json   # another experiment (step 5)
 ```
 
-O modelo com a menor perda de validação fica em `checkpoints/<nome da config>.pt`. A curva e as perdas ficam em `results/<nome da config>/`. O script usa a GPU sozinho quando ela existe (no Kaggle: **Settings → Accelerator → GPU**).
+The model with the lowest validation loss is saved to `checkpoints/<config name>.pt`. The curve and the losses go to `results/<config name>/`. The script uses the GPU automatically when there is one (on Kaggle: **Settings → Accelerator → GPU**).
 
-## Testar no navegador
+## Trying it in the browser
 
 ```bash
 python app.py
 ```
 
-Abre `http://localhost:8000` com uma barra de prompt, no estilo do ChatGPT. O texto aparece caractere por caractere, conforme o modelo gera. Dá para escolher o modelo (`base` ou `grande`), a temperatura, o top-k e o tamanho do texto. Não precisa instalar nada além do `requirements.txt`: o servidor usa o `http.server` do próprio Python. Para encerrar, aperte Ctrl+C no terminal.
+Opens `http://localhost:8000` with a ChatGPT-style prompt bar. The text appears character by character as the model generates it. You can choose the model (`base` or `grande`), the temperature, top-k and the length of the text. Nothing beyond `requirements.txt` is needed: the server uses Python's built-in `http.server`. Press Ctrl+C in the terminal to stop it.
 
-Para a turma acessar pelo celular, na mesma rede Wi-Fi:
+To let the class open it on their phones, on the same Wi-Fi network:
 
 ```bash
 python app.py --rede
 ```
 
-O terminal e o topo da página mostram o endereço para digitar no celular, como `http://192.168.0.12:8000`. No máximo duas gerações rodam ao mesmo tempo; os outros pedidos esperam na fila. Cuidados:
-- Qualquer pessoa na mesma rede consegue abrir a página enquanto o servidor estiver aberto. Feche com Ctrl+C depois da apresentação.
-- Na primeira vez, o Windows pode perguntar sobre o Firewall. Permita só em **redes privadas**.
-- Muitas redes de faculdade bloqueiam a conexão entre aparelhos. Se o celular não abrir a página, use o roteador do celular: ligue o notebook no hotspot do seu celular e peça para a turma conectar nele também.
+The terminal and the top of the page show the address to type on the phone, such as `http://192.168.0.12:8000`. At most two generations run at once; other requests wait in a queue. Things to keep in mind:
+- Anyone on the same network can open the page while the server is running. Stop it with Ctrl+C after the presentation.
+- The first time, Windows may ask about the Firewall. Allow it on **private networks** only.
+- Many university networks block connections between devices. If phones can't open the page, use your phone's hotspot: connect the laptop to it and ask the class to join it too.
 
-## Como gerar texto (Etapa 4)
+## Generating text (step 4)
 
 ```bash
-python generate.py                                       # 500 caracteres a partir de "### Revalida"
+python generate.py                                       # 500 characters starting from "### Revalida"
 python generate.py --inicio "### Enare" --temperatura 0.5 --top-k 10
 python generate.py --amostras 3 --n 300
-python generate.py --comparar                            # grava results/base/amostras.md
+python generate.py --comparar                            # writes results/base/amostras.md
 ```
 
-## Dados
+## Data
 
-[HealthQA-BR](https://huggingface.co/datasets/Larxel/healthqa-br): 5.632 questões de múltipla escolha do Revalida, do Enare Residência Médica e do Enare Multiprofissional, em português, licença CC-BY 4.0.
+[HealthQA-BR](https://huggingface.co/datasets/Larxel/healthqa-br): 5,632 multiple-choice questions from Revalida, Enare Residência Médica and Enare Multiprofissional, in Portuguese, licensed CC-BY 4.0.
 
-Cada questão vira um bloco de texto:
+Each question becomes a block of text:
 
 ```
 ### Revalida 2013 | Clínica Médica
@@ -101,71 +103,72 @@ Homem com 49 anos de idade apresenta...
 Gabarito: C
 ```
 
-O cabeçalho dá estrutura ao corpus: na demo, basta começar com `### Revalida` para o modelo escrever um enunciado.
+The header gives the corpus structure: in the demo, starting with `### Revalida` is enough for the model to write a question.
 
-## Decisões da Etapa 1 (para o relatório)
+## Step 1 decisions
 
-- **Tokenização por caractere:** vocabulário pequeno e código fácil de explicar. BPE fica como experimento da etapa 5.
-- **Limpeza:** normalização Unicode (NFC), aspas e travessões padronizados, espaços repetidos removidos, caracteres com menos de 3 ocorrências descartados. Tudo isso reduz o vocabulário sem mudar o sentido.
-- **Homóglifos:** o texto original, copiado de PDFs, tem letras gregas e cirílicas iguais às latinas (`Allium ceра` com "р" cirílico, alternativa `Ε` com épsilon grego). Elas são trocadas pela letra latina; sem isso, "o" e "о" seriam tokens diferentes.
-- **Alternativas:** no dataset elas vêm como dicionário Python (`'A': 'texto'`, às vezes em várias linhas). Viram `(A) texto` numa linha só.
+- **Character-level tokenization:** a small vocabulary and code that is easy to explain. BPE is left as a step 5 experiment.
+- **Cleaning:** Unicode normalization (NFC), standardized quotes and dashes, repeated spaces removed, characters with fewer than 3 occurrences dropped. All of this shrinks the vocabulary without changing the meaning.
+- **Homoglyphs:** the original text, copied from PDFs, contains Greek and Cyrillic letters that look like Latin ones (`Allium ceра` with a Cyrillic "р", option `Ε` with a Greek epsilon). They are replaced by the Latin letter; otherwise "o" and "о" would be different tokens.
+- **Options:** in the dataset they come as a Python dictionary (`'A': 'text'`, sometimes over several lines). They become `(A) text` on a single line.
 
-### Corpus após o `prepare.py`
+### Corpus after `prepare.py`
 
-| Medida | Valor |
+| Measure | Value |
 | --- | --- |
-| Questões (treino / validação) | 5.069 / 563 |
-| Tamanho | 5,25 MB |
-| Caracteres de treino / validação | 4.574.978 / 508.218 |
-| Vocabulário | 125 caracteres (144 antes de tratar homóglifos e símbolos equivalentes) |
-| Perda inicial esperada ln(125) | 4,83 |
-- **Separação treino/validação (90/10) por questão:** as questões são embaralhadas antes da divisão. Assim a validação cobre todas as provas e anos, e nenhuma questão fica partida entre os dois conjuntos.
-- **Lotes:** `y` é `x` deslocado uma posição; cada posição do bloco é um exemplo de "preveja o próximo caractere".
-- **Teste de sanidade:** a perda inicial esperada é ln(tamanho do vocabulário), gravada em `data/processed/meta.json`. Na semana 2, a primeira perda do modelo precisa bater com esse valor.
+| Questions (train / validation) | 5,069 / 563 |
+| Size | 5.25 MB |
+| Train / validation characters | 4,574,978 / 508,218 |
+| Vocabulary | 125 characters (144 before handling homoglyphs and equivalent symbols) |
+| Expected initial loss ln(125) | 4.83 |
 
-## Decisões da Etapa 2 (para o relatório)
+- **90/10 train/validation split by question:** questions are shuffled before the split, so validation covers every exam and year and no question is cut between the two sets.
+- **Batches:** `y` is `x` shifted by one position; every position in the block is a "predict the next character" example.
+- **Sanity check:** the expected initial loss is ln(vocabulary size), stored in `data/processed/meta.json`. The model's first loss has to match it.
 
-O `model.py` é um Transformer só com decodificador, como o GPT:
+## Step 2 decisions
+
+`model.py` is a decoder-only Transformer, like GPT:
 
 ```
-ids -> embedding do caractere + embedding da posição
-    -> 4 blocos [LayerNorm -> atenção causal (4 cabeças) -> soma residual
-                 LayerNorm -> MLP (4x mais largo, GELU)  -> soma residual]
-    -> LayerNorm -> camada linear -> logits (125 notas, uma por caractere)
+ids -> character embedding + position embedding
+    -> 4 blocks [LayerNorm -> causal attention (4 heads) -> residual add
+                 LayerNorm -> MLP (4x wider, GELU)       -> residual add]
+    -> LayerNorm -> linear layer -> logits (125 scores, one per character)
 ```
 
-- **Atenção causal:** uma máscara triangular impede cada posição de ver as seguintes. Sem ela, prever o próximo caractere seria só copiá-lo.
-- **Escala 1/sqrt(d):** mantém os produtos q·k pequenos, para o softmax não saturar logo no início.
-- **Pre-norm e conexões residuais:** como no GPT-2; deixam o gradiente chegar às primeiras camadas e estabilizam o treino.
-- **Inicialização com desvio 0,02:** os logits começam perto de zero e a perda inicial fica perto de ln(125).
-- **Atenção escrita à mão** (em vez de `F.scaled_dot_product_attention`): mais lenta, mas cada passo da fórmula aparece no código.
+- **Causal attention:** a triangular mask stops each position from seeing the following ones. Without it, predicting the next character would just be copying it.
+- **1/sqrt(d) scaling:** keeps the q·k products small so the softmax doesn't saturate early on.
+- **Pre-norm and residual connections:** as in GPT-2; they let the gradient reach the first layers and stabilize training.
+- **Initialization with std 0.02:** logits start near zero and the initial loss is close to ln(125).
+- **Hand-written attention** (instead of `F.scaled_dot_product_attention`): slower, but every step of the formula is visible in the code.
 
-Com `configs/base.json`, o modelo tem **833.661 parâmetros**. A perda inicial medida num lote real foi **4,90**, perto da esperada (4,83).
+With `configs/base.json` the model has **833,661 parameters**. The initial loss measured on a real batch was **4.90**, close to the expected 4.83.
 
-Os testes em `tests/test_etapa2.py` conferem que:
-- as formas de entrada e saída estão certas;
-- mudar um caractere não altera as previsões das posições anteriores (causalidade);
-- a perda inicial é próxima de ln(vocabulário);
-- o modelo consegue decorar um lote pequeno, sinal de que o gradiente chega a todas as camadas.
+The tests in `tests/test_etapa2.py` check that:
+- input and output shapes are correct;
+- changing one character does not change the predictions for earlier positions (causality);
+- the initial loss is close to ln(vocabulary);
+- the model can memorize a small batch, a sign that the gradient reaches every layer.
 
-## Resultados da Etapa 3 (para o relatório)
+## Step 3 results
 
-Treino com `configs/base.json` na CPU: 5.000 passos em 12,7 minutos.
+Training with `configs/base.json` on CPU: 5,000 steps in 12.7 minutes.
 
-| Medida | Valor |
+| Measure | Value |
 | --- | --- |
-| Perda inicial (treino / validação) | 4,90 / 4,90 |
-| Perda final (treino / validação) | 1,23 / 1,25 |
-| Queda mais rápida | 4,90 → 2,30 nos primeiros 250 passos |
+| Initial loss (train / validation) | 4.90 / 4.90 |
+| Final loss (train / validation) | 1.23 / 1.25 |
+| Fastest drop | 4.90 → 2.30 in the first 250 steps |
 
-![Curva de perda](results/base/curva_perda.png)
+![Loss curve](results/base/curva_perda.png)
 
-- **Sem overfitting:** as curvas de treino e validação ficam juntas até o fim. Como a validação ainda caía no passo 5.000, treinar mais provavelmente melhora o modelo (experimento da Etapa 5).
-- **Os primeiros 250 passos** ensinam o mais fácil: quais caracteres são frequentes, espaços entre palavras, sílabas comuns. Depois o ganho fica lento: palavras inteiras, formato `(A) ... (B) ...`, cabeçalho `### Prova Ano`.
-- **O que é perda 1,25:** em média, o modelo dá probabilidade e^(-1,25) ≈ 29% ao caractere certo, contra 1/125 = 0,8% no início.
-- **Decisões:** AdamW com taxa de aprendizado fixa (0,001), perda média de 100 lotes a cada 250 passos, e o checkpoint guarda o modelo com a menor perda de validação, junto com a config e o vocabulário.
+- **No overfitting:** the train and validation curves stay together until the end. Since validation loss was still falling at step 5,000, training longer would probably help (a step 5 experiment).
+- **The first 250 steps** teach the easy parts: which characters are frequent, spaces between words, common syllables. After that progress slows down: whole words, the `(A) ... (B) ...` format, the `### Exam Year` header.
+- **What a loss of 1.25 means:** on average the model gives the correct character a probability of e^(-1.25) ≈ 29%, against 1/125 = 0.8% at the start.
+- **Choices:** AdamW with a fixed learning rate (0.001), loss averaged over 100 batches every 250 steps, and the checkpoint keeps the model with the lowest validation loss, together with the config and the vocabulary.
 
-Uma amostra gerada a partir de `### Revalida`: o formato está certo, com cabeçalho, enunciado e alternativas, mas o conteúdo ainda não faz sentido.
+A sample generated from `### Revalida`: the format is right, with header, question and options, but the content does not make sense yet.
 
 ```
 ### Revalida 2024
@@ -175,67 +178,67 @@ Uma mulher de 64 anos negatinas de idade, com sinais de 10 para a criança de en
 (B) incluição para o diagnóstico de estrepmetido.
 ```
 
-## Resultados da Etapa 4 (para o relatório)
+## Step 4 results
 
-A geração é **auto-regressiva**: o modelo prevê um caractere, ele é colado no fim do texto e o texto volta para o modelo. O modelo só enxerga os últimos 64 caracteres (`block_size`).
+Generation is **autoregressive**: the model predicts one character, it is appended to the text, and the text goes back into the model. The model only sees the last 64 characters (`block_size`).
 
-Dois controles do sorteio:
-- **Temperatura:** divide os logits antes do softmax. Baixa deixa o texto seguro e repetitivo; alta deixa variado e cheio de erros.
-- **Top-k:** só sorteia entre os k caracteres mais prováveis e corta os erros mais estranhos.
+Two sampling controls:
+- **Temperature:** divides the logits before the softmax. Low makes the text safe and repetitive; high makes it varied and full of mistakes.
+- **Top-k:** samples only among the k most likely characters, cutting the strangest mistakes.
 
-**Avaliação.** A perplexidade de validação é e^1,25 ≈ **3,5**: a cada caractere, o modelo fica em dúvida como se escolhesse entre 3 ou 4 opções, contra 125 no início. Para medir a qualidade do texto gerado, contamos a fração de palavras geradas (3+ letras) que existem no corpus. Média de 5 amostras de 400 caracteres a partir de `### Revalida`:
+**Evaluation.** Validation perplexity is e^1.25 ≈ **3.5**: at each character the model is as unsure as if it were picking between 3 or 4 options, against 125 at the start. To measure the quality of generated text, we count the fraction of generated words (3+ letters) that exist in the corpus. Average of 5 samples of 400 characters starting from `### Revalida`:
 
-| Temperatura | Palavras reais | Palavras reais com top-k = 10 |
+| Temperature | Real words | Real words with top-k = 10 |
 | --- | --- | --- |
-| 0,5 | 89% | 90% |
-| 0,8 | 80% | 83% |
-| 1,0 | 71% | 72% |
-| 1,2 | 57% | 62% |
+| 0.5 | 89% | 90% |
+| 0.8 | 80% | 83% |
+| 1.0 | 71% | 72% |
+| 1.2 | 57% | 62% |
 
-- Temperaturas baixas acertam mais palavras, mas repetem expressões ("de saúde de ... de saúde").
-- O top-k ajuda mais nas temperaturas altas, onde a cauda de caracteres improváveis pesa mais.
-- Em todas as temperaturas o **formato** sai certo: cabeçalho `### Prova Ano | Área`, enunciado, alternativas `(A)`, `(B)`... e `Gabarito:`. O **conteúdo** não faz sentido médico: o modelo aprendeu a forma das questões, não medicina.
-- Métrica limitada: ela aceita palavras reais em sequências sem sentido.
+- Low temperatures get more words right but repeat phrases ("de saúde de ... de saúde").
+- Top-k helps most at high temperatures, where the tail of unlikely characters weighs more.
+- At every temperature the **format** comes out right: `### Exam Year | Field` header, question, options `(A)`, `(B)`... and `Gabarito:`. The **content** makes no medical sense: the model learned the shape of the questions, not medicine.
+- A limited metric: it accepts real words in meaningless sequences.
 
-Amostras completas em [`results/base/amostras.md`](results/base/amostras.md).
+Full samples in [`results/base/amostras.md`](results/base/amostras.md).
 
-## Resultados da Etapa 5 (para o relatório)
+## Step 5 results
 
-Dois experimentos, mudando uma coisa por vez:
-1. **Modelo maior** (`configs/grande.json`): só o tamanho muda (5,8 vezes mais parâmetros).
-2. **Mais contexto** (`configs/contexto.json`): igual ao grande, só o `block_size` muda de 64 para 128.
+Two experiments, changing one thing at a time:
+1. **Larger model** (`configs/grande.json`): only the size changes (5.8 times more parameters).
+2. **More context** (`configs/contexto.json`): same as the large model, only `block_size` changes from 64 to 128.
 
 ```bash
-python train.py --config configs/grande.json     # cerca de 48 min na CPU
-python train.py --config configs/contexto.json   # cerca de 2 h na CPU
-python compare.py                                # grava results/comparacao.md e comparacao.png
+python train.py --config configs/grande.json     # about 48 min on CPU
+python train.py --config configs/contexto.json   # about 2 h on CPU
+python compare.py                                # writes results/comparacao.md and comparacao.png
 ```
 
-Perdas no conjunto de validação inteiro, com **janela deslizante**: cada caractere é previsto com pelo menos metade do contexto do modelo. Janelas lado a lado dão pouco contexto aos primeiros caracteres de cada janela e tornam injusta a comparação entre contextos diferentes. Alternativas em ordem: fração dos pares de alternativas seguidas que saem em ordem, `(A)` → `(B)`, em 90 textos de 1.000 caracteres por modelo.
+Losses on the whole validation set, with a **sliding window**: each character is predicted with at least half of the model's context. Side-by-side windows give little context to the first characters of each window and make the comparison between different contexts unfair. Options in order: the fraction of consecutive option pairs that come out in order, `(A)` → `(B)`, over 90 texts of 1,000 characters per model.
 
-| Modelo | Parâmetros | Contexto | Perda val. | Perplexidade | Alternativas em ordem | Tempo na CPU |
+| Model | Parameters | Context | Val. loss | Perplexity | Options in order | CPU time |
 | --- | --- | --- | --- | --- | --- | --- |
-| 6-grama por contagem | – | 5 | 1,142 | 3,13 | – | – |
-| Transformer base | 833.661 | 64 | 1,193 | 3,30 | – | 13 min |
-| Transformer grande | 4.819.581 | 64 | 1,055 | 2,87 | 42,7% (76/178) | 48 min |
-| Transformer contexto | 4.835.965 | 128 | **1,015** | **2,76** | **74,6% (94/126)** | 120 min |
+| Count-based 6-gram | – | 5 | 1.142 | 3.13 | – | – |
+| Transformer base | 833,661 | 64 | 1.193 | 3.30 | – | 13 min |
+| Transformer large | 4,819,581 | 64 | 1.055 | 2.87 | 42.7% (76/178) | 48 min |
+| Transformer context | 4,835,965 | 128 | **1.015** | **2.76** | **74.6% (94/126)** | 120 min |
 
-![Comparação](results/comparacao.png)
+![Comparison](results/comparacao.png)
 
-- **Tamanho:** o grande terminou bem abaixo da base e passou o 6-grama. Ele começa mais devagar e, com o mesmo tempo de CPU (13 min), a base ganha.
-- **Contexto:** a perda caiu pouco (1,055 → 1,015), mas a ordem das alternativas saltou de 42,7% para 74,6% (teste de proporções: z ≈ 5,5). O contexto longo importa em poucos pontos do texto, mas são os que dão estrutura à questão.
-- O modelo de contexto 128 fica quase parado até o passo 1.000 e passa o grande perto do passo 2.750.
-- Foi um treino de cada, com uma semente só. Repetir com outras sementes deixaria as conclusões mais seguras.
+- **Size:** the large model ended well below the base and beat the 6-gram. It starts more slowly, and with the same CPU time (13 min) the base wins.
+- **Context:** the loss fell only a little (1.055 → 1.015), but options in order jumped from 42.7% to 74.6% (two-proportion test: z ≈ 5.5). Long context matters at few points in the text, but those are the ones that give the question its structure.
+- The context-128 model barely moves until step 1,000 and overtakes the large model around step 2,750.
+- Each model was trained once, with a single seed. Repeating with other seeds would make the conclusions more reliable.
 
-O relatório completo, com a teoria de cada etapa, está em [`relatorio/relatorio.pdf`](relatorio/relatorio.pdf).
+The full report, with the theory behind each step, is in [`relatorio/relatorio.pdf`](relatorio/relatorio.pdf) (in Portuguese).
 
-## Referências
+## References
 
-- Karpathy, *Let's build GPT: from scratch, in code, spelled out* (vídeo) e repositório nanoGPT.
+- Karpathy, *Let's build GPT: from scratch, in code, spelled out* (video) and the nanoGPT repository.
 - Vaswani et al., *Attention Is All You Need* (2017).
 
-## Licença
+## License
 
-Código sob a licença MIT (veja [`LICENSE`](LICENSE)).
+The code is under the MIT license (see [`LICENSE`](LICENSE)).
 
-Os dados vêm do [HealthQA-BR](https://huggingface.co/datasets/Larxel/healthqa-br), publicado sob CC-BY 4.0. O corpus não é distribuído neste repositório: o `data/prepare.py` baixa e processa o conjunto original. Ao usar os dados ou textos gerados a partir deles, cite o HealthQA-BR como fonte.
+The data comes from [HealthQA-BR](https://huggingface.co/datasets/Larxel/healthqa-br), published under CC-BY 4.0. The corpus is not distributed in this repository: `data/prepare.py` downloads and processes the original dataset. If you use the data or text generated from it, credit HealthQA-BR as the source.
