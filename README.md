@@ -81,6 +81,17 @@ The terminal and the top of the page show the address to type on the phone, such
 - The first time, Windows may ask about the Firewall. Allow it on **private networks** only.
 - Many university networks block connections between devices. If phones can't open the page, use your phone's hotspot: connect the laptop to it and ask the class to join it too.
 
+### Streamlit version
+
+`demo/streamlit_app.py` is the same interface in Streamlit, so it can be published with a public link on [Streamlit Community Cloud](https://share.streamlit.io):
+
+```bash
+pip install -r demo/requirements.txt
+streamlit run demo/streamlit_app.py
+```
+
+To deploy it, the trained model has to be in the repository. `.gitignore` skips `*.pt`, so add it explicitly with `git add -f checkpoints/contexto.pt`. On Streamlit Community Cloud, choose this repository, branch `main` and main file `demo/streamlit_app.py`; it installs `demo/requirements.txt`, which uses the CPU-only build of PyTorch.
+
 ## Generating text (step 4)
 
 ```bash

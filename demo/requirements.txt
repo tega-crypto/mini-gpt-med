@@ -1,0 +1,5 @@
+# Só o necessário para a demo no Streamlit Community Cloud.
+# Torch para CPU: a versão padrão traz CUDA e passa de 2 GB.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+streamlit>=1.39
